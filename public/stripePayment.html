@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Stripe Payment</title>
+</head>
+<body>
+  <h3>Stripe Payment Page</h3>
+
+  <label for="amount">Enter Amount (USD):</label>
+  <input type="number" id="amount" placeholder="Amount in USD" min="1" step="1" />
+  <br /><br />
+
+  <button id="payBtn">Pay Now</button>
+
+  <script src="https://checkout.stripe.com/checkout.js"></script>
+
+  <script>
+    document.getElementById('payBtn').addEventListener('click', async () => {
+      const amountInput = document.getElementById('amount').value;
+
+      if (!amountInput || amountInput <= 0) {
+        alert("Please enter a valid amount.");
+        return;
+      }
+
+      const amountInCents = parseInt(amountInput * 100);  // Stripe uses cents
+
+      try {
+        const key = "pk_live_51NqCWASAs1eyMT3VnlFf37m7dmiPIor87mcS9Oo98KNMNBgpHD5rSk4DT3f03rNCotJPMISgR2HiyOQEdzAIEQD400DTNN7tBo";
+
+        const handler = StripeCheckout.configure({
+          key: key,
+          locale: 'auto',
+          token: async function(token) {
+            const res = await fetch('http://localhost:3005/api/payment/stripe/createPayment', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: "67f67f6338586055c6664d26",
+                stripeToken: token.id,
+                stripeEmail: token.email,
+                amount: amountInCents
+              })
+            });
+
+            const responseText = await res.text();
+            alert(responseText);
+          }
+        });
+
+        handler.open({
+          name: 'Example Company',
+          description: 'Custom Amount',
+          amount: amountInCents,
+          currency: 'usd',
+        });
+
+      } catch (error) {
+        console.error('Error during payment:', error);
+        alert('Payment failed!');
+      }
+    });
+  </script>
+</body>
+</html>

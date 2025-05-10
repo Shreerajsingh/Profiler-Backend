@@ -1,0 +1,150 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stripe Payment Element</title>
+  <style>
+    /* Basic styling */
+    body {
+      font-family: Arial, sans-serif;
+      padding: 50px;
+    }
+    form {
+      max-width: 500px;
+      margin: auto;
+    }
+    #payment-element {
+      margin-bottom: 20px;
+    }
+    #submit {
+      background-color: #5469d4;
+      color: #ffffff;
+      border: none;
+      padding: 12px 16px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #error-message {
+      color: red;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Complete your payment</h2>
+  <form id="payment-form">
+    <div id="payment-element">
+      <!--Stripe.js injects the Payment Element here-->
+    </div>
+    <button id="submit">Pay</button>
+    <div id="error-message"></div>
+  </form>
+
+  <!-- Load Stripe.js -->
+  <script src="https://js.stripe.com/v3/"></script>
+  <script>
+    const stripe = Stripe('pk_live_51NqCWASAs1eyMT3VnlFf37m7dmiPIor87mcS9Oo98KNMNBgpHD5rSk4DT3f03rNCotJPMISgR2HiyOQEdzAIEQD400DTNN7tBo'); // Replace with your actual publishable key
+
+    let elements;
+
+    initialize();
+    checkStatus();
+
+    document
+      .querySelector("#payment-form")
+      .addEventListener("submit", handleSubmit);
+
+    async function initialize() {
+      const response = await fetch("http://localhost:3005/api/payment/stripe/createPayment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userData: {
+            userId: "681e4ce0501a7673a44c6500",
+            name: "Rohit",
+            address: {
+              line1: '123 Main Street',
+              city: 'Mumbai',
+              state: 'MH',
+              postal_code: '400001',
+              country: 'IN',
+            },
+            email: "user24@gmail.com"
+          },
+          paymentDetails: {
+            amount: 1,
+            currency: "INR",
+            description: "sdgdgfdhghghj dsgdg"
+          }
+        })
+      }); 
+      const { clientSecret } = await response.json();
+
+      elements = stripe.elements({ clientSecret });
+
+      const paymentElement = elements.create("payment");
+      paymentElement.mount("#payment-element");
+    }
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      setLoading(true);
+
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: window.location.href,
+        },
+      });
+
+      if (error) {
+        document.querySelector("#error-message").textContent = error.message;
+      } else {
+        document.querySelector("#error-message").textContent = "";
+      }
+
+      setLoading(false);
+    }
+
+    async function checkStatus() {
+      const clientSecret = new URLSearchParams(window.location.search).get(
+        "payment_intent_client_secret"
+      );
+
+      if (!clientSecret) {
+        return;
+      }
+
+      const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
+
+      switch (paymentIntent.status) {
+        case "succeeded":
+          alert("Payment succeeded!");
+          break;
+        case "processing":
+          alert("Your payment is processing.");
+          break;
+        case "requires_payment_method":
+          alert("Your payment was not successful, please try again.");
+          break;
+        default:
+          alert("Something went wrong.");
+          break;
+      }
+    }
+
+    function setLoading(isLoading) {
+      const submitButton = document.querySelector("#submit");
+      submitButton.disabled = isLoading;
+      submitButton.textContent = isLoading ? "Processing..." : "Pay";
+    }
+  </script>
+</body>
+</html>
