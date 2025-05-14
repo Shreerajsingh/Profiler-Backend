@@ -149,6 +149,7 @@ async function createStripePayment(userData, paymentDetails) {
 
     return {
       clientSecret: paymentIntent.client_secret,
+      status: paymentIntent.status,
       amount: convertedAmount
     };
   } catch (error) {

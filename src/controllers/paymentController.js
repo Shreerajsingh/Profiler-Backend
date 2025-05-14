@@ -63,7 +63,10 @@ async function stripeCreateOrder(req, res) {
         const { userData, paymentDetails } = req.body;
         const response = await paymentService.createStripePayment(userData, paymentDetails);
 
-        res.send(response);
+        return res.status(200).json({
+            success: true,
+            clientSecret: response.clientSecret
+        });
       } catch (err) {
         console.error("Payment failed:", err);
         res.status(500).send("Payment Failed");
